@@ -168,12 +168,12 @@ function apiError(response: Response, payload: unknown): Error {
     reasons.some((reason) => reason.includes("insufficient") || reason.includes("scope"));
   if (insufficientScope) {
     return new Error(
-      "Google Analytics API rejected the request because the OAuth profile lacks the required " +
+      "Google Analytics API rejected the request because the OAuth credential configuration lacks the required " +
         "analytics.readonly and analytics.edit scopes; reauthorize the configured credential source.",
     );
   }
   if (response.status === 401) {
-    return new Error("Google Analytics API authentication failed; the OAuth profile may be stale.");
+    return new Error("Google Analytics API authentication failed; the OAuth credential configuration may be stale.");
   }
   if (response.status === 403) return new Error("Google Analytics API access denied for this account or property.");
   if (response.status === 404) return new Error("Google Analytics resource was not found or is not accessible.");

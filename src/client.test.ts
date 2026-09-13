@@ -63,14 +63,14 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
       const parsed = new URL(url);
       expect(init?.headers).toMatchObject({ Authorization: `Bearer ${ACCESS_TOKEN}` });
       if (parsed.pathname === "/v1beta/accounts") {
-        return apiResponse({ accounts: [{ name: "accounts/100", displayName: "MyCalc" }] });
+        return apiResponse({ accounts: [{ name: "accounts/100", displayName: "Example Account" }] });
       }
       if (parsed.pathname === "/v1beta/properties") {
         expect(parsed.searchParams.get("filter")).toBe("parent:accounts/100");
-        return apiResponse({ properties: [{ name: "properties/200", parent: "accounts/100", displayName: "MyCalc Analytics", timeZone: "America/New_York", currencyCode: "USD", secretField: "must-not-escape" }] });
+        return apiResponse({ properties: [{ name: "properties/200", parent: "accounts/100", displayName: "Example Analytics", timeZone: "America/New_York", currencyCode: "USD", secretField: "must-not-escape" }] });
       }
       if (parsed.pathname === "/v1beta/properties/200/dataStreams") {
-        return apiResponse({ dataStreams: [{ name: "properties/200/dataStreams/300", type: "WEB_DATA_STREAM", displayName: "MyCalc web", webStreamData: { measurementId: "G-ABC123", defaultUri: "https://mycalcexpert.com" }, privateField: "must-not-escape" }] });
+        return apiResponse({ dataStreams: [{ name: "properties/200/dataStreams/300", type: "WEB_DATA_STREAM", displayName: "Example web", webStreamData: { measurementId: "G-ABC123", defaultUri: "https://example.test" }, hiddenField: "must-not-escape" }] });
       }
       if (parsed.pathname === "/v1beta/properties/200:runReport") {
         expect(init?.method).toBe("POST");
@@ -81,17 +81,17 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
           dimensionFilter: { filter: { fieldName: "eventName", stringFilter: { matchType: "EXACT", value: "calculate" } } },
         });
         expect(body).not.toHaveProperty("dimensions");
-        return apiResponse({ rows: [{ metricValues: [{ value: "7" }], dimensionValues: [{ value: "private" }] }, { metricValues: [{ value: "2" }] }] });
+        return apiResponse({ rows: [{ metricValues: [{ value: "7" }], dimensionValues: [{ value: "redacted" }] }, { metricValues: [{ value: "2" }] }] });
       }
       return apiResponse({ error: { message: "not found" } }, 404);
     }) as unknown as typeof fetch;
 
-    await expect(analytics.listAccounts()).resolves.toEqual([{ name: "accounts/100", accountId: "100", displayName: "MyCalc" }]);
+    await expect(analytics.listAccounts()).resolves.toEqual([{ name: "accounts/100", accountId: "100", displayName: "Example Account" }]);
     await expect(analytics.listProperties("accounts/100")).resolves.toEqual([{
       name: "properties/200",
       propertyId: "200",
       parent: "accounts/100",
-      displayName: "MyCalc Analytics",
+      displayName: "Example Analytics",
       timeZone: "America/New_York",
       currencyCode: "USD",
     }]);
@@ -99,10 +99,10 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
       name: "properties/200/dataStreams/300",
       streamId: "300",
       propertyId: "200",
-      displayName: "MyCalc web",
+      displayName: "Example web",
       type: "WEB_DATA_STREAM",
       measurementId: "G-ABC123",
-      defaultUri: "https://mycalcexpert.com",
+      defaultUri: "https://example.test",
     }]);
     await expect(analytics.reportEvent("properties/200", "calculate", 3, "2026-09-03")).resolves.toEqual({
       propertyId: "200",
@@ -204,17 +204,17 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
       const url = String(input);
       if (url === TOKEN_URI) return tokenResponse();
       requests.push({ url, init });
-      if (new URL(url).pathname === "/v1beta/properties") return apiResponse({ name: "properties/901", parent: "accounts/100", displayName: "Created property", timeZone: "UTC", currencyCode: "USD", users: [{ email: "private@example.com" }] });
-      return apiResponse({ name: "properties/901/dataStreams/902", type: "WEB_DATA_STREAM", displayName: "Created stream", webStreamData: { measurementId: "G-NEW123", defaultUri: "https://mycalcexpert.com" }, users: [{ email: "private@example.com" }] });
+      if (new URL(url).pathname === "/v1beta/properties") return apiResponse({ name: "properties/901", parent: "accounts/100", displayName: "Created property", timeZone: "UTC", currencyCode: "USD", users: [{ email: "user@example.test" }] });
+      return apiResponse({ name: "properties/901/dataStreams/902", type: "WEB_DATA_STREAM", displayName: "Created stream", webStreamData: { measurementId: "G-NEW123", defaultUri: "https://example.test" }, users: [{ email: "user@example.test" }] });
     }) as unknown as typeof fetch;
 
     await expect(analytics.createProperty({ account: "100", displayName: "Created property", timeZone: "UTC", currencyCode: "usd" })).resolves.toMatchObject({ name: "properties/901", propertyId: "901", parent: "accounts/100" });
-    await expect(analytics.createWebStream({ property: "901", displayName: "Created stream", defaultUri: "https://mycalcexpert.com" })).resolves.toMatchObject({ name: "properties/901/dataStreams/902", measurementId: "G-NEW123" });
+    await expect(analytics.createWebStream({ property: "901", displayName: "Created stream", defaultUri: "https://example.test" })).resolves.toMatchObject({ name: "properties/901/dataStreams/902", measurementId: "G-NEW123" });
     const propertyBody = JSON.parse(String(requests[0]?.init?.body)) as Record<string, unknown>;
     expect(propertyBody).toEqual({ parent: "accounts/100", displayName: "Created property", industryCategory: "OTHER", timeZone: "UTC", currencyCode: "USD" });
     const streamBody = JSON.parse(String(requests[1]?.init?.body)) as Record<string, unknown>;
-    expect(streamBody).toEqual({ displayName: "Created stream", type: "WEB_DATA_STREAM", webStreamData: { defaultUri: "https://mycalcexpert.com" } });
-    expect(JSON.stringify(await analytics.createProperty({ account: "100", displayName: "owner@example.com", timeZone: "UTC", currencyCode: "USD" }).catch((error: unknown) => String(error)))).not.toContain("owner@example.com");
+    expect(streamBody).toEqual({ displayName: "Created stream", type: "WEB_DATA_STREAM", webStreamData: { defaultUri: "https://example.test" } });
+    expect(JSON.stringify(await analytics.createProperty({ account: "100", displayName: "user@example.test", timeZone: "UTC", currencyCode: "USD" }).catch((error: unknown) => String(error)))).not.toContain("user@example.test");
   });
 
   test("does not expose email-like labels or unrequested fields", async () => {
@@ -222,12 +222,12 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
     useCredentials();
     globalThis.fetch = (async (input: string | URL) => {
       if (String(input) === TOKEN_URI) return tokenResponse();
-      return apiResponse({ accounts: [{ name: "accounts/1", displayName: "owner@example.com", email: "owner@example.com", secret: "private" }] });
+      return apiResponse({ accounts: [{ name: "accounts/1", displayName: "user@example.test", email: "user@example.test", secret: "hidden" }] });
     }) as unknown as typeof fetch;
     const accounts = await analytics.listAccounts();
     expect(accounts[0]?.displayName).toBe("[redacted label]");
-    expect(JSON.stringify(accounts)).not.toContain("owner@example.com");
-    expect(JSON.stringify(accounts)).not.toContain("private");
+    expect(JSON.stringify(accounts)).not.toContain("user@example.test");
+    expect(JSON.stringify(accounts)).not.toContain("hidden");
   });
 
   test("turns scope, auth and malformed responses into safe errors", async () => {
@@ -250,7 +250,7 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
     expect(() => analytics.dateRange(0)).toThrow("1 to 365");
     expect(() => analytics.dateRange(366)).toThrow("1 to 365");
     expect(() => analytics.dateRange(2, "2026-02-30")).toThrow("real calendar date");
-    expect(() => analytics.validateEventName("owner@example.com")).toThrow("event-name");
+    expect(() => analytics.validateEventName("user@example.test")).toThrow("event-name");
     expect(() => analytics.validateStreamResource("properties/1/dataStreams/2")).not.toThrow();
     expect(() => analytics.validateStreamResource("dataStreams/2")).toThrow("resource name");
   });

@@ -47,12 +47,12 @@ describe("Google Analytics CLI contract", () => {
   });
 
   test("projects only public resource IDs and aggregate fields", () => {
-    const account = accountSummary({ name: "accounts/1", accountId: "1", displayName: "MyCalc" });
-    const property = propertySummary({ name: "properties/2", propertyId: "2", parent: "accounts/1", displayName: "MyCalc Analytics", timeZone: "UTC", currencyCode: "USD" });
-    const stream = streamSummary({ name: "properties/2/dataStreams/3", streamId: "3", propertyId: "2", type: "WEB_DATA_STREAM", displayName: "Web", measurementId: "G-ABC123", defaultUri: "https://mycalcexpert.com" });
+    const account = accountSummary({ name: "accounts/1", accountId: "1", displayName: "Example Account" });
+    const property = propertySummary({ name: "properties/2", propertyId: "2", parent: "accounts/1", displayName: "Example Analytics", timeZone: "UTC", currencyCode: "USD" });
+    const stream = streamSummary({ name: "properties/2/dataStreams/3", streamId: "3", propertyId: "2", type: "WEB_DATA_STREAM", displayName: "Example Web", measurementId: "G-ABC123", defaultUri: "https://example.test" });
     const report = reportSummary({ propertyId: "2", eventName: "calculate", totalEvents: 8, startDate: "2026-09-01", endDate: "2026-09-03", sourceHealthy: true });
     const visitors = visitorsSummary({ propertyId: "2", metric: "totalUsers", totalUsers: 12, startDate: "2026-09-01", endDate: "2026-09-30", sourceHealthy: true });
-    expect(account).toEqual({ account: "accounts/1", accountId: "1", displayName: "MyCalc" });
+    expect(account).toEqual({ account: "accounts/1", accountId: "1", displayName: "Example Account" });
     expect(property).toMatchObject({ property: "properties/2", propertyId: "2", account: "accounts/1" });
     expect(stream).toMatchObject({ stream: "properties/2/dataStreams/3", measurementId: "G-ABC123" });
     expect(report).toEqual({ property: "properties/2", propertyId: "2", eventName: "calculate", totalEvents: 8, startDate: "2026-09-01", endDate: "2026-09-03", sourceHealthy: true });
