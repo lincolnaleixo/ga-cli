@@ -5,7 +5,7 @@ import {
   AUTHORIZATION_URI,
   CALLBACK_PATH,
   START_PATH,
-  VAULT_REFRESH_TOKEN_REFERENCE,
+  CREDENTIAL_NAME,
   buildConsentUrl,
   bootstrapConfigFromEnv,
   callbackPathFromRedirectUri,
@@ -13,11 +13,11 @@ import {
   exchangeAuthorizationCode,
   pkceChallenge,
   runOAuthOnboarding,
-  setRefreshTokenInVault,
+  setRefreshTokenWithCommand,
   type BootstrapConfig,
   type HttpHandler,
   type LoopbackServer,
-  type VaultSetProcess,
+  type CredentialSetProcess,
   validateRedirectUri,
 } from "./oauth.ts";
 
@@ -72,7 +72,7 @@ describe("Google Analytics OAuth security", () => {
       "https://www.googleapis.com/auth/analytics.readonly",
       "https://www.googleapis.com/auth/analytics.edit",
     ]);
-    expect(() => bootstrapConfigFromEnv({ ...env(), GOOGLE_ANALYTICS_REFRESH_TOKEN: REFRESH_TOKEN })).toThrow("bootstrap Vault profile without a refresh token");
+    expect(() => bootstrapConfigFromEnv({ ...env(), GOOGLE_ANALYTICS_REFRESH_TOKEN: REFRESH_TOKEN })).toThrow("without a refresh token");
     expect(() => bootstrapConfigFromEnv({ ...env(), GOOGLE_ANALYTICS_TOKEN_URI: "https://user:password@example.test/token?secret=value" })).toThrow("without embedded credentials or query data");
     const url = new URL(buildConsentUrl(config, REDIRECT_URI, { state: "state", challenge: "challenge" }));
     expect(url.origin + url.pathname).toBe(AUTHORIZATION_URI);
@@ -116,7 +116,7 @@ describe("Google Analytics OAuth exchange and onboarding", () => {
     expect(refresh).toBe(REFRESH_TOKEN);
   });
 
-  test("uses state, PKCE, a value-free start URL and exact Vault stdin handoff", async () => {
+  test("uses state, PKCE, a value-free start URL and exact credential stdin handoff", async () => {
     let consentUrl = "";
     let manualUrl = "";
     let stored = "";
@@ -170,17 +170,17 @@ describe("Google Analytics OAuth exchange and onboarding", () => {
   });
 });
 
-describe("Google Analytics Vault handoff", () => {
+describe("Google Analytics credential handoff", () => {
   test("uses fixed argv, writes token to stdin, drains child output and emits no logs", async () => {
     let args: string[] = [];
     let input = "";
     let options: unknown;
-    const child: VaultSetProcess = {
+    const child: CredentialSetProcess = {
       stdin: { write(value) { input += typeof value === "string" ? value : new TextDecoder().decode(value); }, end: () => undefined },
       stdout: byteStream(REFRESH_TOKEN), stderr: byteStream(REFRESH_TOKEN), exited: Promise.resolve(0),
     };
-    await setRefreshTokenInVault(REFRESH_TOKEN, (nextArgs, nextOptions) => { args = nextArgs; options = nextOptions; return child; });
-    expect(args).toEqual(["/home/robot/.local/bin/system-vault", "set", VAULT_REFRESH_TOKEN_REFERENCE, "--confirm"]);
+    await setRefreshTokenWithCommand(REFRESH_TOKEN, (nextArgs, nextOptions) => { args = nextArgs; options = nextOptions; return child; });
+    expect(args).toEqual(["set", CREDENTIAL_NAME, "--confirm"]);
     expect(input).toBe(`${REFRESH_TOKEN}\n`);
     expect(args.join(" ")).not.toContain(REFRESH_TOKEN);
     expect(JSON.stringify(options)).toContain('"stdin":"pipe"');

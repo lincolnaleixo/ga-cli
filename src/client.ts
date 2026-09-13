@@ -81,7 +81,7 @@ function config(): AnalyticsConfig {
   if (missing.length > 0) {
     throw new Error(
       `Google Analytics credentials missing: ${missing.join(", ")}. ` +
-        "Run through `system-vault run google-analytics --`.",
+        "Set GOOGLE_ANALYTICS_CLIENT_ID, GOOGLE_ANALYTICS_CLIENT_SECRET, and GOOGLE_ANALYTICS_REFRESH_TOKEN in the environment or credential runner.",
     );
   }
 
@@ -169,7 +169,7 @@ function apiError(response: Response, payload: unknown): Error {
   if (insufficientScope) {
     return new Error(
       "Google Analytics API rejected the request because the OAuth profile lacks the required " +
-        "analytics.readonly and analytics.edit scopes; reauthorize the dedicated Vault profile.",
+        "analytics.readonly and analytics.edit scopes; reauthorize the configured credential source.",
     );
   }
   if (response.status === 401) {

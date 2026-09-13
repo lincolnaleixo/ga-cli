@@ -11,7 +11,7 @@ Requirements:
 
 - [Bun](https://bun.sh/)
 - A Google Cloud OAuth client suitable for a local/desktop application
-- A secret broker or another secure environment-variable injector
+- A secure environment-variable injector or credential command
 
 From a checkout of this repository:
 
@@ -117,8 +117,8 @@ ga-cli create-stream <property> --confirm \
 ### `onboard`
 
 Run the OAuth authorization-code flow, receive an offline refresh token, and
-store it through the configured secret broker. This changes secret-manager
-state and requires `--confirm`:
+store it through the configured credential command. This changes credential
+storage state and requires `--confirm`:
 
 ```bash
 ga-cli onboard --confirm [--port PORT] [--redirect-uri URI] \
@@ -142,20 +142,23 @@ The reporting commands require these environment variables at runtime:
   Google's standard OAuth token endpoint.
 
 Do not commit a `.env` file, print these values, or pass them as command-line
-arguments. Inject them from a secret broker or process supervisor. The OAuth
-client ID and secret used for onboarding must be available without a refresh
-token; onboarding writes the resulting refresh token to the broker. Then use
+arguments. Inject them from a secret manager or process supervisor. For
+onboarding, set `GOOGLE_ANALYTICS_CREDENTIAL_COMMAND` to an executable that
+accepts `set google-analytics.refresh-token --confirm` and reads the token from
+stdin. The OAuth client ID and secret must be available without a refresh
+token; onboarding writes the resulting refresh token to that command. Then use
 the same client configuration and stored refresh token for reporting.
 
 After Google Cloud OAuth consent-screen and client setup, run onboarding with
-the broker's documented environment injection command. A generic example is:
+your environment injection command. A generic example is:
 
 ```bash
-<secret-runner> --env GOOGLE_ANALYTICS_CLIENT_ID \
-  --env GOOGLE_ANALYTICS_CLIENT_SECRET ga-cli onboard --confirm
+<credential-runner> --env GOOGLE_ANALYTICS_CLIENT_ID \
+  --env GOOGLE_ANALYTICS_CLIENT_SECRET \
+  --env GOOGLE_ANALYTICS_CREDENTIAL_COMMAND ga-cli onboard --confirm
 ```
 
-The exact runner and secret names are deployment-specific. `ga-cli` never
+The exact runner and credential names are deployment-specific. `ga-cli` never
 prints access tokens, refresh tokens, client secrets, consent URLs, or raw API
 payloads. Re-run onboarding if the refresh token is revoked or the granted
 scopes need to change.

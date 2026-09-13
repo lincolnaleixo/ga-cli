@@ -92,7 +92,7 @@ export function assertMutationConfirmation(flags: Record<string, FlagValue>, ope
 }
 
 export function assertOnboardingConfirmation(flags: Record<string, FlagValue>): void {
-  if (!hasFlag(flags, "confirm")) throw new CliError("onboard requires explicit --confirm because it creates or rotates a Vault secret");
+  if (!hasFlag(flags, "confirm")) throw new CliError("onboard requires explicit --confirm because it creates or rotates a credential");
 }
 
 function required(positionals: string[], index: number, label: string): string {
@@ -193,9 +193,9 @@ export function visitorsSummary(report: AnalyticsVisitorsReport): Record<string,
 }
 
 export function usage(): string {
-  return `Google Analytics (Vault-backed aggregate administration)
+  return `Google Analytics aggregate administration
 
-Usage: /home/robot/.local/bin/system-vault run google-analytics -- bun <skill-directory>/scripts/cli.ts <command> [args]
+Usage: ga-cli <command> [args]
 
 Commands:
   accounts [--json]                              List accessible accounts
@@ -219,11 +219,12 @@ Commands:
     --no-browser                                  Show a local helper URL instead of opening a browser
   help                                             Show this help
 
-The dedicated OAuth profile must include analytics.readonly and analytics.edit.
-Run onboarding through google-analytics-bootstrap, which contains only the
-client ID, client secret, and token URI. OAuth uses state, S256 PKCE, a
-127.0.0.1 listener, and a value-free /start helper URL. It never prints the
-consent URL or any token. Mutations require --confirm and there is no delete.
+The configured credential source must include analytics.readonly and analytics.edit.
+Set GOOGLE_ANALYTICS_CREDENTIAL_COMMAND to a command that accepts
+`set google-analytics.refresh-token --confirm` and reads the token from stdin.
+OAuth uses state, S256 PKCE, a 127.0.0.1 listener, and a value-free /start
+helper URL. It never prints the consent URL or any token. Mutations require
+--confirm and there is no delete.
 Reports use only the eventName filter and eventCount metric; no dimensions or
 personal data are requested or returned. Visitor reports use only the totalUsers
 metric over the full inclusive range; they never request dimensions, sum daily
@@ -330,7 +331,7 @@ async function main(): Promise<void> {
           timeoutMs: timeoutSeconds === undefined ? undefined : timeoutSeconds * 1000,
           noBrowser: hasFlag(parsed.flags, "no-browser"),
         });
-        console.log("Google Analytics OAuth grant stored securely in System Vault.");
+        console.log("Google Analytics OAuth grant stored through the credential command.");
         return;
       default:
         throw new CliError(`unknown command: ${command}\n\n${usage()}`);

@@ -255,9 +255,9 @@ describe("Google Analytics client with mocked OAuth and APIs", () => {
     expect(() => analytics.validateStreamResource("dataStreams/2")).toThrow("resource name");
   });
 
-  test("fails clearly when the Vault profile did not inject credentials", async () => {
+  test("fails clearly when credentials were not injected", async () => {
     previousFetch = globalThis.fetch;
     for (const name of environment) delete process.env[name];
-    await expect(analytics.listAccounts()).rejects.toThrow("system-vault run google-analytics");
+    await expect(analytics.listAccounts()).rejects.toThrow("GOOGLE_ANALYTICS_CLIENT_ID");
   });
 });

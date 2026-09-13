@@ -32,9 +32,9 @@ describe("Google Analytics CLI contract", () => {
     expect(() => assertOnboardingConfirmation({ confirm: true })).not.toThrow();
   });
 
-  test("documents the dedicated profiles, scope, aggregate boundary and no delete", () => {
+  test("documents the credential source, scope, aggregate boundary and no delete", () => {
     const text = usage();
-    expect(text).toContain("google-analytics-bootstrap");
+    expect(text).toContain("GOOGLE_ANALYTICS_CREDENTIAL_COMMAND");
     expect(text).toContain("analytics.readonly");
     expect(text).toContain("analytics.edit");
     expect(text).toContain("--confirm");
