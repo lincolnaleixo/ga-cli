@@ -7,8 +7,8 @@
   "bin": { "ga-cli": "./bin/ga-cli" },
   "scripts": {
     "check": "bun run typecheck && bun run test",
+    "typecheck": "tsc --noEmit",
     "test": "bun test src"
   },
   "devDependencies": { "@types/bun": "1.4.0", "typescript": "7.0.2" }
 }
-
