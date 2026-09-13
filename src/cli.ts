@@ -221,7 +221,7 @@ Commands:
 
 The configured credential source must include analytics.readonly and analytics.edit.
 Set GOOGLE_ANALYTICS_CREDENTIAL_COMMAND to a command that accepts
-`set google-analytics.refresh-token --confirm` and reads the token from stdin.
+set google-analytics.refresh-token --confirm and reads the token from stdin.
 OAuth uses state, S256 PKCE, a 127.0.0.1 listener, and a value-free /start
 helper URL. It never prints the consent URL or any token. Mutations require
 --confirm and there is no delete.
