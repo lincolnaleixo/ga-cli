@@ -5,13 +5,12 @@ export const ANALYTICS_SCOPES = [
 export const ANALYTICS_SCOPE = ANALYTICS_SCOPES.join(" ");
 export const AUTHORIZATION_URI = "https://accounts.google.com/o/oauth2/v2/auth";
 export const DEFAULT_TOKEN_URI = "https://oauth2.googleapis.com/token";
-export const VAULT_REFRESH_TOKEN_REFERENCE = "google_analytics.default.default.refresh_token";
+export const CREDENTIAL_NAME = "google-analytics.refresh-token";
 export const CALLBACK_PATH = "/oauth/callback";
 export const START_PATH = "/start";
 
 const DEFAULT_TIMEOUT_MS = 5 * 60 * 1000;
 const DEFAULT_PORT = 0;
-const VAULT_CLIENT = "/home/robot/.local/bin/system-vault";
 
 export interface BootstrapConfig {
   clientId: string;
@@ -33,17 +32,17 @@ interface PipedStdin {
   end: () => unknown;
 }
 
-export interface VaultSetProcess {
+export interface CredentialSetProcess {
   stdin: PipedStdin;
   stdout?: ReadableStream<Uint8Array> | null;
   stderr?: ReadableStream<Uint8Array> | null;
   exited: Promise<number>;
 }
 
-export type VaultSpawn = (
+export type CredentialSpawn = (
   args: string[],
   options: { stdin: "pipe"; stdout: "pipe"; stderr: "pipe" },
-) => VaultSetProcess;
+) => CredentialSetProcess;
 
 export interface PkcePair {
   state: string;
@@ -194,8 +193,8 @@ export function bootstrapConfigFromEnv(
 ): BootstrapConfig {
   if (nonEmptyString(env.GOOGLE_ANALYTICS_REFRESH_TOKEN)) {
     throw new Error(
-      "OAuth onboarding requires the bootstrap Vault profile without a refresh token; " +
-        "do not run onboarding through the full reporting profile.",
+      "OAuth onboarding requires client credentials without a refresh token; " +
+        "do not provide a reporting refresh token when onboarding.",
     );
   }
 
@@ -208,7 +207,7 @@ export function bootstrapConfigFromEnv(
   if (missing.length > 0) {
     throw new Error(
       `OAuth bootstrap credentials missing: ${missing.join(", ")}. ` +
-        "Run through `system-vault run google-analytics-bootstrap --`.",
+        "Set GOOGLE_ANALYTICS_CLIENT_ID and GOOGLE_ANALYTICS_CLIENT_SECRET in the environment or credential runner.",
     );
   }
 
@@ -363,35 +362,36 @@ async function drain(stream: ReadableStream<Uint8Array> | null | undefined): Pro
   }
 }
 
-function defaultVaultSpawn(args: string[], options: {
+function defaultCredentialSpawn(args: string[], options: {
   stdin: "pipe";
   stdout: "pipe";
   stderr: "pipe";
-}): VaultSetProcess {
-  return Bun.spawn(args, options) as unknown as VaultSetProcess;
+}): CredentialSetProcess {
+  const command = process.env.GOOGLE_ANALYTICS_CREDENTIAL_COMMAND?.trim();
+  if (!command) throw new Error("GOOGLE_ANALYTICS_CREDENTIAL_COMMAND must name a credential command for onboarding.");
+  return Bun.spawn([command, ...args], options) as unknown as CredentialSetProcess;
 }
 
 /**
- * Store a newly issued refresh token through the Vault client only. The token
- * is written to the child's stdin, while stdout/stderr are drained and never
- * forwarded. The command line contains only a fixed reference and --confirm.
+ * Store a newly issued refresh token through an overridable credential command.
+ * The token is written to stdin and child output is drained without forwarding.
  */
-export async function setRefreshTokenInVault(
+export async function setRefreshTokenWithCommand(
   refreshToken: string,
-  spawn: VaultSpawn = defaultVaultSpawn,
+  spawn: CredentialSpawn = defaultCredentialSpawn,
 ): Promise<void> {
   if (!safeCredential(refreshToken)) throw new Error("Google OAuth returned an invalid refresh token.");
 
-  let child: VaultSetProcess;
+  let child: CredentialSetProcess;
   try {
     child = spawn(
-      [VAULT_CLIENT, "set", VAULT_REFRESH_TOKEN_REFERENCE, "--confirm"],
+      ["set", CREDENTIAL_NAME, "--confirm"],
       { stdin: "pipe", stdout: "pipe", stderr: "pipe" },
     );
     await Promise.resolve(child.stdin.write(`${refreshToken}\n`));
     await Promise.resolve(child.stdin.end());
   } catch {
-    throw new Error("System Vault could not receive the Google Analytics refresh token.");
+    throw new Error("Credential command could not receive the Google Analytics refresh token.");
   }
 
   const drains = [drain(child.stdout), drain(child.stderr)];
@@ -400,11 +400,11 @@ export async function setRefreshTokenInVault(
     exitCode = await child.exited;
   } catch {
     await Promise.all(drains);
-    throw new Error("System Vault could not store the Google Analytics refresh token.");
+    throw new Error("Credential command could not store the Google Analytics refresh token.");
   }
   await Promise.all(drains);
   if (exitCode !== 0) {
-    throw new Error("System Vault rejected the Google Analytics refresh token.");
+    throw new Error("Credential command rejected the Google Analytics refresh token.");
   }
 }
 
@@ -547,7 +547,7 @@ export async function runOAuthOnboarding(
         config,
         options.fetchImpl,
       );
-      await (options.setRefreshToken ?? ((token: string) => setRefreshTokenInVault(token)))(refreshToken);
+      await (options.setRefreshToken ?? ((token: string) => setRefreshTokenWithCommand(token)))(refreshToken);
     } finally {
       clearTimeout(timer);
     }
