@@ -1,16 +1,5 @@
 # ga-cli
 
-Google Analytics reporting CLI and API client
-
-## Install
-
-## Use
-
-## License
-
-MIT.
-# ga-cli
-
 `ga-cli` is a Bun/TypeScript command-line client for Google Analytics 4. It
 lists accessible accounts, properties, and web data streams; produces small
 aggregate reports; creates properties and streams; and supports OAuth
